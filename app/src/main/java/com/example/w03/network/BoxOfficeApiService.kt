@@ -1,19 +1,27 @@
 package com.example.w03.network
 
 import com.example.w03.data.BoxOfficeResponse
+import com.example.w03.data.WeeklyBoxOfficeResponse // 1단계에서 만든 주간용 그릇 import
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-// Retrofit이 사용할 'API 명세' 인터페이스입니다.
+// Retrofit이 사용할 'API 명세' 인터페이스
 interface BoxOfficeApiService {
 
-    // "kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/" 뒤에 붙을 주소
+    // 1. [일별] 박스오피스 요청 함수
     @GET("searchDailyBoxOfficeList.json")
     suspend fun getDailyBoxOffice(
-        // @Query("key")는 요청 URL에 "?key=xxxx" 형식으로 파라미터를 추가합니다.
         @Query("key") key: String,
         @Query("targetDt") targetDt: String,
-        @Query("itemPerPage") itemPerPage: String = "10" // 10개만 가져오도록 고정
-    ): Response<BoxOfficeResponse> // 3단계에서 만든 '그릇'으로 응답을 받습니다.
+        @Query("itemPerPage") itemPerPage: String = "10"
+    ): Response<BoxOfficeResponse>
+
+    // 2. [주간] 박스오피스 요청 함수 (여기가 추가된 부분!)
+    @GET("searchWeeklyBoxOfficeList.json")
+    suspend fun getWeeklyBoxOffice(
+        @Query("key") key: String,
+        @Query("targetDt") targetDt: String,
+        @Query("weekGb") weekGb: String = "0" // 0은 주간(월~일)을 의미
+    ): Response<WeeklyBoxOfficeResponse>
 }

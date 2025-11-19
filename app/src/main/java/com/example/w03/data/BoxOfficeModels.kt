@@ -41,3 +41,16 @@ data class MovieItem(
     @SerializedName("audiCnt")
     val audienceCount: String // 당일 관객 수
 )
+// [추가] 주간 박스오피스 응답용 그릇
+data class WeeklyBoxOfficeResponse(
+    val boxOfficeResult: WeeklyBoxOfficeResult
+)
+
+data class WeeklyBoxOfficeResult(
+    val boxofficeType: String,
+    val showRange: String,
+
+    // 여기가 'weeklyBoxOfficeList'로 바뀝니다.
+    @SerializedName("weeklyBoxOfficeList")
+    val weeklyBoxOfficeList: List<MovieItem>
+)

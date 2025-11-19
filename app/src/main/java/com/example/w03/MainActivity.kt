@@ -6,12 +6,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -52,11 +55,67 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MovieScreen(viewModel: MainViewModel) {
     val state by viewModel.uiState.observeAsState(MovieUiState.Loading)
+    val isDaily by viewModel.isDailyMode.observeAsState(true) // 현재 모드 확인
 
-    when (state) {
-        is MovieUiState.Loading -> LoadingScreen()
-        is MovieUiState.Success -> MovieListScreen(movies = (state as MovieUiState.Success).movies)
-        is MovieUiState.Error -> ErrorScreen(message = (state as MovieUiState.Error).message)
+    Column(modifier = Modifier.fillMaxSize()) {
+        // [상단] 타이틀 및 전환 버튼
+        TopSection(isDaily = isDaily, viewModel = viewModel)
+
+        // [하단] 리스트 영역
+        Box(modifier = Modifier.weight(1f)) {
+            when (state) {
+                is MovieUiState.Loading -> LoadingScreen()
+                is MovieUiState.Success -> MovieListScreen(movies = (state as MovieUiState.Success).movies)
+                is MovieUiState.Error -> ErrorScreen(message = (state as MovieUiState.Error).message)
+            }
+        }
+    }
+}
+
+// ✨ [추가된 상단 영역] 제목과 버튼 2개
+@Composable
+fun TopSection(isDaily: Boolean, viewModel: MainViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.primaryContainer) // 배경색 살짝 넣기
+            .padding(16.dp)
+    ) {
+        Text(
+            text = if (isDaily) "📅 일별 박스오피스" else "🏆 주간 박스오피스",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 버튼 2개를 가로로 배치
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // [일별] 버튼
+            Button(
+                onClick = { viewModel.fetchDailyBoxOffice() },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp), // 왼쪽 둥글게
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDaily) MaterialTheme.colorScheme.primary else Color.LightGray
+                )
+            ) {
+                Text("일별 랭킹")
+            }
+
+            // [주간] 버튼
+            Button(
+                onClick = { viewModel.fetchWeeklyBoxOffice() },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp), // 오른쪽 둥글게
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!isDaily) MaterialTheme.colorScheme.primary else Color.LightGray
+                )
+            ) {
+                Text("주간 랭킹")
+            }
+        }
     }
 }
 
@@ -90,15 +149,24 @@ fun MovieListScreen(movies: List<MovieItem>) {
 fun MovieItemRow(movie: MovieItem) {
     val context = LocalContext.current
 
-    // 클릭 시 실행할 함수 정의
-    val onButtonClick = {
+    val onDetailClick = {
         val query = movie.movieName
         val url = "https://search.naver.com/search.naver?query=$query"
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         context.startActivity(intent)
     }
 
-    // Card에는 onClick을 제거했습니다. (이제 카드를 눌러도 반응하지 않음)
+    val onShareClick = {
+        val shareText = "야 이 영화 요즘 뜬대! 🎬\n\n[${movie.rank}위] ${movie.movieName}\n(관객수: ${movie.audienceCount}명)"
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, "친구에게 공유하기")
+        context.startActivity(shareIntent)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -132,9 +200,7 @@ fun MovieItemRow(movie: MovieItem) {
             Spacer(modifier = Modifier.width(8.dp))
 
             // [2] 영화 정보
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = movie.movieName,
                     style = MaterialTheme.typography.titleMedium,
@@ -142,9 +208,7 @@ fun MovieItemRow(movie: MovieItem) {
                     color = Color.Black,
                     maxLines = 1
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.DateRange, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -157,20 +221,20 @@ fun MovieItemRow(movie: MovieItem) {
                 }
             }
 
-            // [3] 버튼
-            // 오직 이 버튼을 눌렀을 때만 onButtonClick 함수가 실행됩니다.
-            FilledTonalButton(
-                onClick = onButtonClick,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text(text = "상세", fontSize = 13.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
+            // [3] 버튼 영역
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onShareClick) {
+                    Icon(Icons.Default.Share, contentDescription = "공유", tint = Color.Gray)
+                }
+                FilledTonalButton(
+                    onClick = onDetailClick,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(text = "상세", fontSize = 13.sp)
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Icon(Icons.Default.KeyboardArrowRight, null, modifier = Modifier.size(16.dp))
+                }
             }
         }
     }
