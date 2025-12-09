@@ -6,7 +6,8 @@
 ![Retrofit2](https://img.shields.io/badge/Retrofit2-Network-green)
 
 ## 📱 실행 화면
-![App Screenshot](https://via.placeholder.com/800x400?text=Please+Upload+Your+Main+Screenshot+Here)
+![App Screenshot](https://via.placehold<img width="347" height="648" alt="제목 없음" src="https://github.com/user-attachments/assets/50e8f08d-f1c7-4a40-b57d-82608bd614cc" />
+er.com/800x400?text=Please+Upload+Your+Main+Screenshot+Here)
 *(여기에 앱 실행 화면 캡처 이미지를 드래그해서 넣어주세요)*
 
 ---
